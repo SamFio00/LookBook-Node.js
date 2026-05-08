@@ -34,11 +34,18 @@ const createUser = (req, res) => {
   });
 };
 
+// GET by id
 const getUserById = (req, res) => {
     
-    const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id);
 
-    const user = users.find(u => u.id === id);
+  const user = users.find(u => u.id === id);
+
+  if (isNaN(id)) {
+    return res.status(400).json({
+      message: "ID utente non valido"
+    });
+  }
 
   if (!user) {
     return res.status(404).json({
@@ -52,12 +59,14 @@ const getUserById = (req, res) => {
     });
 };
 
+// PUT
 const updateUser = (req, res) => {
     const id = parseInt(req.params.id);
 
     const { name, surname, email } = req.body;
 
     const user = users.find(u => u.id === id);
+    
 
     if (!user) {
         return res.status(404).json({
@@ -75,6 +84,7 @@ const updateUser = (req, res) => {
     });
 };
 
+// DELETE
 const deleteUser = (req, res) => {
     const id = parseInt(req.params.id);
 
