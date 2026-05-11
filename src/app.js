@@ -5,8 +5,10 @@ app.use(express.json());
 
 const userRoutes = require('./routes/users.routes');
 const productRoutes = require('./routes/products.routes');
+const swapsRoutes = require('./routes/swaps.routes');
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
+app.use('/swaps', swapsRoutes);
 
 app.get('/', (req, res) => {
     res.json({

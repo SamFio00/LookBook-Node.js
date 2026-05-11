@@ -1,9 +1,10 @@
-let users = []; // "database" temporaneo
+const users = require("../data/users.data");
 
 // GET all users
 const getUsers = (req, res) => {
   res.json({
     message: "Lista utenti",
+    results: users.length,
     data: users
   });
 };

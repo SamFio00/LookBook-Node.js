@@ -1,7 +1,8 @@
-let products = []; // "database" temporaneo
+const products = require("../data/products.data");
 const getProducts = (req, res) => {
     res.json({
         message: "Lista prodotti",
+        results: products.length,
         data: products
     });
 };
