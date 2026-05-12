@@ -1,4 +1,3 @@
-
 const express = require("express");
 const router = express.Router();
 
@@ -6,7 +5,9 @@ const {
     getProducts, 
     createProduct, 
     getProductById, 
-    updateProduct, 
+    updateProduct,
+    addProductImage,
+    removeProductImage, 
     deleteProduct 
 } = require("../controllers/products.controller");
 
@@ -21,6 +22,12 @@ router.get("/:id", getProductById);
 
 // PUT
 router.put("/:id", updateProduct);
+
+// PATCH (add image)
+router.patch("/:id/add-image", addProductImage);
+
+// PATCH (remove image)
+router.patch("/:id/remove-image", removeProductImage);
 
 // DELETE
 router.delete("/:id", deleteProduct);

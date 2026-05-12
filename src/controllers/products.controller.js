@@ -1,119 +1,292 @@
-const products = require("../data/products.data");
-const getProducts = (req, res) => {
-    res.json({
-        message: "Lista prodotti",
-        results: products.length,
-        data: products
-    });
-};
+const mongoose = require("mongoose");
+const Product = require("../models/product.model");
 
-// POST
-const createProduct = (req, res) => {
-    const { name, images } = req.body;
+// GET
+const getProducts = async (req, res) => {
 
-    if (!name || !Array.isArray(images)) {
-        return res.status(400).json({
-            message: "Tutti i campi sono obbligatori"
+    try {
+
+        const products = await Product.find();
+
+        res.status(200).json({
+            message: "Lista prodotti",
+            results: products.length,
+            data: products
+        });
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore interno del server",
+            error: error.message
         });
     }
+}
 
-    const newProduct = {
-        id: products.length + 1,
-        name,
-        images
-    };
+// POST
+const createProduct = async (req, res) => {
 
-    products.push(newProduct);
+    try {
 
-    res.status(201).json({
-        message: "Prodotto inserito",
-        data: newProduct
-    });
+        const { name, images } = req.body;
+
+        if (!name) {
+            return res.status(400).json({
+                message: "Nome obbligatorio"
+            });
+        }
+
+        if (!images) {
+            return res.status(400).json({
+                message: "Images obbligatorie"
+            });
+        }
+
+        if (!Array.isArray(images)) {
+            return res.status(400).json({
+                message: "Images deve essere un array"
+            });
+        }
+
+        if (images.length === 0) {
+            return res.status(400).json({
+                message: "Devi inserire almeno un'immagine"
+            });
+        }
+
+        const newProduct = await Product.create({
+            name,
+            images
+        });
+
+        res.status(201).json({
+            message: "Prodotto inserito",
+            data: newProduct
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
+        });
+    }
 };
 
 // GET by id
-const getProductById = (req, res) => {
-    const id = parseInt(req.params.id);
+const getProductById = async (req, res) => {
 
-    if (isNaN(id)) {
-        return res.status(400).json({
-            message: "ID prodotto non valido"
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID prodotto non valido"
+            });
+        }
+
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({
+                message: "Prodotto non trovato"
+            });
+        }
+
+        res.status(200).json({
+            message: "Prodotto trovato",
+            data: product
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
-
-    const product = products.find(p => p.id === id);
-
-    if (!product) {
-        return res.status(404).json({
-            message: "Prodotto non trovato"
-        });
-    }
-
-    res.json({
-        message: "Prodotto trovato",
-        data: product
-    });
 };
 
+
 // PUT
-const updateProduct = (req, res) => {
-    const id = parseInt(req.params.id);
+const updateProduct = async (req, res) => {
 
-    const { name, images } = req.body;
+    try {
 
-    if (isNaN(id)) {
-        return res.status(400).json({
-            message: "ID prodotto non valido"
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID prodotto non valido"
+            });
+        }
+
+        const { name, images } = req.body;
+
+        const updateData = {};
+
+        if (name) updateData.name = name;
+
+        if (images) {
+            if (!Array.isArray(images)) {
+                return res.status(400).json({
+                    message: "Images deve essere un array"
+                });
+            }
+            updateData.images = images;
+        }
+
+        const updatedProduct = await Product.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedProduct) {
+            return res.status(404).json({
+                message: "Prodotto non trovato"
+            });
+        }
+
+        res.status(200).json({
+            message: "Prodotto aggiornato",
+            data: updatedProduct
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
+};
 
-    const product = products.find(p => p.id === id);
+// PATCH (add image)
+const addProductImage = async (req, res) => {
 
-    if (!product) {
-        return res.status(404).json({
-            message: "Prodotto non trovato"
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID prodotto non valido"
+            });
+        }
+
+        const { image } = req.body;
+
+        if (!image) {
+            return res.status(400).json({
+                message: "Image obbligatoria"
+            });
+        }
+
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({
+                message: "Prodotto non trovato"
+            });
+        }
+
+        product.images.push(image);
+
+        await product.save();
+
+        res.status(200).json({
+            message: "Immagine aggiunta",
+            data: product
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
+};
 
-    if (images && !Array.isArray(images)) {
-        return res.status(400).json({
-            message: "Images deve essere un array"
+// PATCH (remove image)
+const removeProductImage = async (req, res) => {
+
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID prodotto non valido"
+            });
+        }
+
+        const { image } = req.body;
+
+        if (!image) {
+            return res.status(400).json({
+                message: "Image obbligatoria"
+            });
+        }
+
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
+            return res.status(404).json({
+                message: "Prodotto non trovato"
+            });
+        }
+
+        const initialLength = product.images.length;
+
+        product.images = product.images.filter(img => img !== image);
+
+        if (product.images.length === initialLength) {
+            return res.status(404).json({
+                message: "Immagine non trovata"
+            });
+        }
+
+        await product.save();
+
+        res.status(200).json({
+            message: "Immagine rimossa",
+            data: product
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
-
-    if (name) product.name = name;
-    if (images) product.images = images;
-
-    res.json({
-        message: "Prodotto aggiornato",
-        data: product
-    });
 };
 
 // DELETE
-const deleteProduct = (req, res) => {
-    const id = parseInt(req.params.id);
+const deleteProduct = async (req, res) => {
 
-    if (isNaN(id)) {
-        return res.status(400).json({
-            message: "ID prodotto non valido"
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID prodotto non valido"
+            });
+        }
+
+        const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+
+        if (!deletedProduct) {
+            return res.status(404).json({
+                message: "Prodotto non trovato"
+            });
+        }
+
+        res.status(200).json({
+            message: "Prodotto eliminato",
+            data: deletedProduct
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
-
-    const index = products.findIndex(p => p.id === id);
-
-    if (index === -1) {
-        return res.status(404).json({
-            message: "Prodotto non trovato"
-        });
-    }
-
-    const deletedProduct = products.splice(index, 1);
-
-    res.json({
-        message: "Prodotto eliminato",
-        data: deletedProduct[0]
-    });
 };
 
 module.exports = {
@@ -121,5 +294,7 @@ module.exports = {
     createProduct,
     getProductById,
     updateProduct,
+    addProductImage,
+    removeProductImage,
     deleteProduct
 };

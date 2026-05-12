@@ -1,108 +1,177 @@
-const users = require("../data/users.data");
+const mongoose = require("mongoose");
+const User = require("../models/user.model");
 
 // GET all users
-const getUsers = (req, res) => {
-  res.json({
-    message: "Lista utenti",
-    results: users.length,
-    data: users
-  });
+const getUsers = async (req, res) => {
+
+    try {
+
+        const users = await User.find();
+
+        res.status(200).json({
+            message: "Lista utenti",
+            results: users.length,
+            data: users
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
+        });
+    }
 };
 
 // POST create user
-const createUser = (req, res) => {
-  const { name, surname, email } = req.body;
+const createUser = async (req, res) => {
 
-  // controllo base
-  if (!name || !surname || !email) {
-    return res.status(400).json({
-      message: "Tutti i campi sono obbligatori"
-    });
-  }
+    try {
 
-  const newUser = {
-    id: users.length + 1,
-    name,
-    surname,
-    email
-  };
+        const { name, surname, email } = req.body;
 
-  users.push(newUser);
+        if (!name || !surname || !email) {
+            return res.status(400).json({
+                message: "Tutti i campi sono obbligatori"
+            });
+        }
 
-  res.status(201).json({
-    message: "Utente creato",
-    data: newUser
-  });
-};
+        const existingEmail = await User.findOne({ email });
 
-// GET by id
-const getUserById = (req, res) => {
-    
-  const id = parseInt(req.params.id);
+        if (existingEmail) {
+            return res.status(409).json({
+                message: "Email già esistente"
+            });
+        }
 
-  const user = users.find(u => u.id === id);
+        const newUser = await User.create({
+            name,
+            surname,
+            email
+        });
 
-  if (isNaN(id)) {
-    return res.status(400).json({
-      message: "ID utente non valido"
-    });
-  }
+        res.status(201).json({
+            message: "Utente creato",
+            data: newUser
+        });
 
-  if (!user) {
-    return res.status(404).json({
-      message: "Utente non trovato"
-    });
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
+        });
     }
+};
+// GET by id
+const getUserById = async (req, res) => {
 
-    res.json({
-        message: "Utente trovato",
-        data: user
-    });
+    try {
+
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID utente non valido"
+            });
+        }
+
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                message: "Utente non trovato"
+            });
+        }
+
+        res.status(200).json({
+            message: "Utente trovato",
+            data: user
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
+        });
+    }
 };
 
 // PUT
-const updateUser = (req, res) => {
-    const id = parseInt(req.params.id);
+const updateUser = async (req, res) => {
 
-    const { name, surname, email } = req.body;
+    try {
 
-    const user = users.find(u => u.id === id);
-    
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID utente non valido"
+            });
+        }
 
-    if (!user) {
-        return res.status(404).json({
-            message: "Utente non trovato"
+        const { name, surname, email } = req.body;
+
+        const updateData = {};
+
+        if (name) updateData.name = name;
+        if (surname) updateData.surname = surname;
+        if (email) updateData.email = email;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedUser) {
+            return res.status(404).json({
+                message: "Utente non trovato"
+            });
+        }
+
+        res.status(200).json({
+            message: "Utente aggiornato",
+            data: updatedUser
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
-
-    if (name) user.name = name;
-    if (surname) user.surname = surname;
-    if (email) user.email = email;
-
-    res.json({
-        message: "Utente aggiornato",
-        data: user
-    });
 };
 
 // DELETE
-const deleteUser = (req, res) => {
-    const id = parseInt(req.params.id);
+const deleteUser = async (req, res) => {
 
-    const index = users.findIndex(u => u.id === id);
+    try {
 
-    if (index === -1) {
-        return res.status(404).json({
-            message: "Utente non trovato"
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({
+                message: "ID utente non valido"
+            });
+        }
+
+        const deletedUser = await User.findByIdAndDelete(req.params.id);
+
+        if (!deletedUser) {
+            return res.status(404).json({
+                message: "Utente non trovato"
+            });
+        }
+
+        res.status(200).json({
+            message: "Utente eliminato",
+            data: deletedUser
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: "Errore server",
+            error: error.message
         });
     }
-
-    const deletedUser = users.splice(index, 1);
-
-    res.json({
-        message: "Utente eliminato",
-        data: deletedUser[0]
-    });
 };
 
 module.exports = {
