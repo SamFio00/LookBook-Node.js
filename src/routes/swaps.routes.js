@@ -10,19 +10,14 @@ const {
     rejectSwap 
 } = require("../controllers/swaps.controller");
 
-// GET
-router.get("/", getSwaps);
+router.route("/")
+    .get(getSwaps)
+    .post(createSwap);
 
-// POST
-router.post("/", createSwap);
+router.route("/:id")
+    .get(getSwapById)
+    .delete(deleteSwap);
 
-// GET by id
-router.get("/:id", getSwapById);
-
-// DELETE
-router.delete("/:id", deleteSwap);
-
-// PATCH
 router.patch("/:id/accept", acceptSwap);
 router.patch("/:id/reject", rejectSwap);
 
