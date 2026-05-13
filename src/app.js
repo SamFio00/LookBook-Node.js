@@ -9,6 +9,7 @@ const swapsRoutes = require('./routes/swaps.routes');
 app.use('/users', userRoutes);
 app.use('/products', productRoutes);
 app.use('/swaps', swapsRoutes);
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
     res.json({

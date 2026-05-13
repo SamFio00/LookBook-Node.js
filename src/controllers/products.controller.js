@@ -3,9 +3,7 @@ const Product = require("../models/product.model");
 
 // GET
 const getProducts = async (req, res) => {
-
     try {
-
         const products = await Product.find();
 
         res.status(200).json({
@@ -13,21 +11,19 @@ const getProducts = async (req, res) => {
             results: products.length,
             data: products
         });
-    } catch (error) {
 
+    } catch (error) {
         res.status(500).json({
             message: "Errore interno del server",
             error: error.message
         });
     }
-}
+};
 
-// POST
+// POST (create product with images via multer)
 const createProduct = async (req, res) => {
-
     try {
-
-        const { name, images } = req.body;
+        const { name } = req.body;
 
         if (!name) {
             return res.status(400).json({
@@ -35,23 +31,13 @@ const createProduct = async (req, res) => {
             });
         }
 
-        if (!images) {
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({
-                message: "Images obbligatorie"
+                message: "Almeno una immagine obbligatoria"
             });
         }
 
-        if (!Array.isArray(images)) {
-            return res.status(400).json({
-                message: "Images deve essere un array"
-            });
-        }
-
-        if (images.length === 0) {
-            return res.status(400).json({
-                message: "Devi inserire almeno un'immagine"
-            });
-        }
+        const images = req.files.map(file => file.path);
 
         const newProduct = await Product.create({
             name,
@@ -64,7 +50,6 @@ const createProduct = async (req, res) => {
         });
 
     } catch (error) {
-
         res.status(500).json({
             message: "Errore server",
             error: error.message
@@ -74,7 +59,6 @@ const createProduct = async (req, res) => {
 
 // GET by id
 const getProductById = async (req, res) => {
-
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -97,7 +81,6 @@ const getProductById = async (req, res) => {
         });
 
     } catch (error) {
-
         res.status(500).json({
             message: "Errore server",
             error: error.message
@@ -105,10 +88,8 @@ const getProductById = async (req, res) => {
     }
 };
 
-
-// PUT
+// PUT (update only text fields)
 const updateProduct = async (req, res) => {
-
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -117,20 +98,10 @@ const updateProduct = async (req, res) => {
             });
         }
 
-        const { name, images } = req.body;
+        const { name } = req.body;
 
         const updateData = {};
-
         if (name) updateData.name = name;
-
-        if (images) {
-            if (!Array.isArray(images)) {
-                return res.status(400).json({
-                    message: "Images deve essere un array"
-                });
-            }
-            updateData.images = images;
-        }
 
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
@@ -150,7 +121,6 @@ const updateProduct = async (req, res) => {
         });
 
     } catch (error) {
-
         res.status(500).json({
             message: "Errore server",
             error: error.message
@@ -158,9 +128,8 @@ const updateProduct = async (req, res) => {
     }
 };
 
-// PATCH (add image)
+// PATCH (add images via multer)
 const addProductImage = async (req, res) => {
-
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -169,11 +138,9 @@ const addProductImage = async (req, res) => {
             });
         }
 
-        const { image } = req.body;
-
-        if (!image) {
+        if (!req.files || req.files.length === 0) {
             return res.status(400).json({
-                message: "Image obbligatoria"
+                message: "Devi caricare almeno un'immagine"
             });
         }
 
@@ -185,17 +152,18 @@ const addProductImage = async (req, res) => {
             });
         }
 
-        product.images.push(image);
+        const newImages = req.files.map(file => file.path);
+
+        product.images.push(...newImages);
 
         await product.save();
 
         res.status(200).json({
-            message: "Immagine aggiunta",
+            message: "Immagini aggiunte",
             data: product
         });
 
     } catch (error) {
-
         res.status(500).json({
             message: "Errore server",
             error: error.message
@@ -205,7 +173,6 @@ const addProductImage = async (req, res) => {
 
 // PATCH (remove image)
 const removeProductImage = async (req, res) => {
-
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -218,7 +185,7 @@ const removeProductImage = async (req, res) => {
 
         if (!image) {
             return res.status(400).json({
-                message: "Image obbligatoria"
+                message: "Immagine obbligatoria"
             });
         }
 
@@ -230,15 +197,15 @@ const removeProductImage = async (req, res) => {
             });
         }
 
-        const initialLength = product.images.length;
+        const filteredImages = product.images.filter(img => img !== image);
 
-        product.images = product.images.filter(img => img !== image);
-
-        if (product.images.length === initialLength) {
+        if (filteredImages.length === product.images.length) {
             return res.status(404).json({
                 message: "Immagine non trovata"
             });
         }
+
+        product.images = filteredImages;
 
         await product.save();
 
@@ -248,7 +215,6 @@ const removeProductImage = async (req, res) => {
         });
 
     } catch (error) {
-
         res.status(500).json({
             message: "Errore server",
             error: error.message
@@ -258,7 +224,6 @@ const removeProductImage = async (req, res) => {
 
 // DELETE
 const deleteProduct = async (req, res) => {
-
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -281,7 +246,6 @@ const deleteProduct = async (req, res) => {
         });
 
     } catch (error) {
-
         res.status(500).json({
             message: "Errore server",
             error: error.message
