@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
 const User = require("../models/user.model");
+const AppError = require("../utils/AppError");
 
 // GET all users
-const getUsers = async (req, res) => {
+const getUsers = async (req, res, next) => {
 
     try {
 
@@ -15,33 +16,26 @@ const getUsers = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // POST create user
-const createUser = async (req, res) => {
+const createUser = async (req, res, next) => {
 
     try {
 
         const { name, surname, email } = req.body;
 
         if (!name || !surname || !email) {
-            return res.status(400).json({
-                message: "Tutti i campi sono obbligatori"
-            });
+            return next(new AppError("Tutti i campi sono obbligatori", 400));
         }
 
         const existingEmail = await User.findOne({ email });
 
         if (existingEmail) {
-            return res.status(409).json({
-                message: "Email già esistente"
-            });
+            return next(new AppError("Email già in uso", 409));
         }
 
         const newUser = await User.create({
@@ -56,30 +50,23 @@ const createUser = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 // GET by id
-const getUserById = async (req, res) => {
+const getUserById = async (req, res, next) => {
 
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({
-                message: "ID utente non valido"
-            });
+            return next(new AppError("ID utente non valido", 400));
         }
 
         const user = await User.findById(req.params.id);
 
         if (!user) {
-            return res.status(404).json({
-                message: "Utente non trovato"
-            });
+            return next(new AppError("Utente non trovato", 404));
         }
 
         res.status(200).json({
@@ -88,23 +75,18 @@ const getUserById = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // PUT
-const updateUser = async (req, res) => {
+const updateUser = async (req, res, next) => {
 
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({
-                message: "ID utente non valido"
-            });
+            return next(new AppError("ID utente non valido", 400));
         }
 
         const { name, surname, email } = req.body;
@@ -122,9 +104,7 @@ const updateUser = async (req, res) => {
         );
 
         if (!updatedUser) {
-            return res.status(404).json({
-                message: "Utente non trovato"
-            });
+            return next(new AppError("Utente non trovato", 404));
         }
 
         res.status(200).json({
@@ -133,31 +113,24 @@ const updateUser = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // DELETE
-const deleteUser = async (req, res) => {
+const deleteUser = async (req, res, next) => {
 
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({
-                message: "ID utente non valido"
-            });
+            return next(new AppError("ID utente non valido", 400));
         }
 
         const deletedUser = await User.findByIdAndDelete(req.params.id);
 
         if (!deletedUser) {
-            return res.status(404).json({
-                message: "Utente non trovato"
-            });
+            return next(new AppError("Utente non trovato", 404));
         }
 
         res.status(200).json({
@@ -166,11 +139,8 @@ const deleteUser = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 

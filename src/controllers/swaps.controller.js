@@ -4,6 +4,8 @@ const Swap = require("../models/swap.model");
 const User = require("../models/user.model");
 const Product = require("../models/product.model");
 
+const AppError = require("../utils/AppError");
+
 const populateSwap = (query) => {
     return query
         .populate("requesterUser", "name surname email")
@@ -13,7 +15,7 @@ const populateSwap = (query) => {
 };
 
 // GET ALL SWAPS
-const getSwaps = async (req, res) => {
+const getSwaps = async (req, res, next) => {
 
     try {
 
@@ -30,9 +32,7 @@ const getSwaps = async (req, res) => {
             ];
 
             if (!allowedStatus.includes(status)) {
-                return res.status(400).json({
-                    message: "Status non valido"
-                });
+                return next(new AppError("Stato non valido", 400));
             }
 
             filters.status = status;
@@ -43,9 +43,7 @@ const getSwaps = async (req, res) => {
             const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
             if (!dateRegex.test(date)) {
-                return res.status(400).json({
-                    message: "Formato data non valido (YYYY-MM-DD)"
-                });
+                return next(new AppError("Data non valida, formato: YYYY-MM-DD", 400));
             }
 
             const startDate = new Date(date);
@@ -62,17 +60,13 @@ const getSwaps = async (req, res) => {
         if (productId) {
 
             if (!mongoose.Types.ObjectId.isValid(productId)) {
-                return res.status(400).json({
-                    message: "Product ID non valido"
-                });
+                return next(new AppError("ID prodotto non valido", 400));
             }
 
             const productExists = await Product.findById(productId);
 
             if (!productExists) {
-                return res.status(404).json({
-                    message: "Prodotto non trovato"
-                });
+                return next(new AppError("Prodotto non trovato", 404));
             }
 
             filters.$or = [
@@ -92,16 +86,13 @@ const getSwaps = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // CREATE SWAP
-const createSwap = async (req, res) => {
+const createSwap = async (req, res, next) => {
 
     try {
 
@@ -118,9 +109,7 @@ const createSwap = async (req, res) => {
             !requesterProduct ||
             !receiverProduct
         ) {
-            return res.status(400).json({
-                message: "Tutti i campi sono obbligatori"
-            });
+            return next(new AppError("Tutti i campi sono obbligatori", 400));
         }
 
         if (
@@ -129,39 +118,29 @@ const createSwap = async (req, res) => {
             !mongoose.Types.ObjectId.isValid(requesterProduct) ||
             !mongoose.Types.ObjectId.isValid(receiverProduct)
         ) {
-            return res.status(400).json({
-                message: "Uno o più ID non validi"
-            });
+            return next(new AppError("Uno o più ID non sono validi", 400));
         }
 
         if (requesterUser === receiverUser) {
-            return res.status(400).json({
-                message: "Uno user non può fare swap con sé stesso"
-            });
+            return next(new AppError("Utenti devono essere diversi", 400));
         }
 
         if (requesterProduct === receiverProduct) {
-            return res.status(400).json({
-                message: "Non puoi scambiare lo stesso prodotto"
-            });
+            return next(new AppError("Prodotti devono essere diversi", 400));
         }
 
         const requesterUserExists = await User.findById(requesterUser);
         const receiverUserExists = await User.findById(receiverUser);
 
         if (!requesterUserExists || !receiverUserExists) {
-            return res.status(404).json({
-                message: "Utente non trovato"
-            });
+            return next(new AppError("Uno o più utenti non trovati", 404));
         }
 
         const requesterProductExists = await Product.findById(requesterProduct);
         const receiverProductExists = await Product.findById(receiverProduct);
 
         if (!requesterProductExists || !receiverProductExists) {
-            return res.status(404).json({
-                message: "Prodotto non trovato"
-            });
+            return next(new AppError("Uno o più prodotti non trovati", 404));
         }
 
         const newSwap = await Swap.create({
@@ -181,23 +160,18 @@ const createSwap = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // GET SWAP BY ID
-const getSwapById = async (req, res) => {
+const getSwapById = async (req, res, next) => {
 
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({
-                message: "ID swap non valido"
-            });
+            return next(new AppError("ID swap non valido", 400));
         }
 
         const swap = await populateSwap(
@@ -205,9 +179,7 @@ const getSwapById = async (req, res) => {
         );
 
         if (!swap) {
-            return res.status(404).json({
-                message: "Swap non trovato"
-            });
+            return next(new AppError("Swap non trovato", 404));
         }
 
         res.status(200).json({
@@ -216,31 +188,24 @@ const getSwapById = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // DELETE SWAP
-const deleteSwap = async (req, res) => {
+const deleteSwap = async (req, res, next) => {
 
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({
-                message: "ID swap non valido"
-            });
+            return next(new AppError("ID swap non valido", 400));
         }
 
         const deletedSwap = await Swap.findByIdAndDelete(req.params.id);
 
         if (!deletedSwap) {
-            return res.status(404).json({
-                message: "Swap non trovato"
-            });
+            return next(new AppError("Swap non trovato", 404));
         }
 
         res.status(200).json({
@@ -249,37 +214,28 @@ const deleteSwap = async (req, res) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
 // UPDATE SWAP STATUS
-const updateSwapStatus = async (req, res, status) => {
+const updateSwapStatus = async (req, res, next, status) => {
 
     try {
 
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return res.status(400).json({
-                message: "ID swap non valido"
-            });
+            return next(new AppError("ID swap non valido", 400));
         }
 
         const swap = await Swap.findById(req.params.id);
 
         if (!swap) {
-            return res.status(404).json({
-                message: "Swap non trovato"
-            });
+            return next(new AppError("Swap non trovato", 404));
         }
 
         if (swap.status !== "pending") {
-            return res.status(400).json({
-                message: "Swap già gestito"
-            });
+            return next(new AppError("Swap già accettato o rifiutato", 400));
         }
 
         swap.status = status;
@@ -296,20 +252,17 @@ const updateSwapStatus = async (req, res, status) => {
         });
 
     } catch (error) {
-
-        res.status(500).json({
-            message: "Errore server",
-            error: error.message
-        });
+        error.statusCode = 500;
+        next(error);
     }
 };
 
-const acceptSwap = (req, res) => {
-    updateSwapStatus(req, res, "accepted");
+const acceptSwap = (req, res, next) => {
+    updateSwapStatus(req, res, next, "accepted");
 };
 
-const rejectSwap = (req, res) => {
-    updateSwapStatus(req, res, "rejected");
+const rejectSwap = (req, res, next) => {
+    updateSwapStatus(req, res, next, "rejected");
 };
 
 module.exports = {
