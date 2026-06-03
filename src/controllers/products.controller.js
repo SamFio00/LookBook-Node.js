@@ -1,10 +1,11 @@
 const mongoose = require("mongoose");
 const Product = require("../models/product.model");
+const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 
 // GET
-const getProducts = async (req, res, next) => {
-    try {
+const getProducts = asyncHandler(async (req, res) => {
+
         const products = await Product.find();
 
         res.status(200).json({
@@ -12,16 +13,11 @@ const getProducts = async (req, res, next) => {
             results: products.length,
             data: products
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // POST (create product with images via multer)
-const createProduct = async (req, res, next) => {
-    try {
+const createProduct = asyncHandler(async (req, res, next) => {
+
         const { name } = req.body;
 
         if (!name) {
@@ -44,19 +40,10 @@ const createProduct = async (req, res, next) => {
             data: newProduct
         });
 
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // GET by id
-const getProductById = async (req, res, next) => {
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID prodotto non valido", 400));
-        }
+const getProductById = asyncHandler(async (req, res, next) => {
 
         const product = await Product.findById(req.params.id);
 
@@ -68,20 +55,10 @@ const getProductById = async (req, res, next) => {
             message: "Prodotto trovato",
             data: product
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // PUT (update only text fields)
-const updateProduct = async (req, res, next) => {
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID prodotto non valido", 400));
-        }
+const updateProduct = asyncHandler(async (req, res, next) => {
 
         const { name } = req.body;
 
@@ -102,20 +79,10 @@ const updateProduct = async (req, res, next) => {
             message: "Prodotto aggiornato",
             data: updatedProduct
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // PATCH (add images via multer)
-const addProductImage = async (req, res, next) => {
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID prodotto non valido", 400));
-        }
+const addProductImage = asyncHandler(async (req, res, next) => {
 
         if (!req.files || req.files.length === 0) {
             return next(new AppError("Devi caricare almeno un'immagine", 400));
@@ -137,20 +104,10 @@ const addProductImage = async (req, res, next) => {
             message: "Immagini aggiunte",
             data: product
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // PATCH (remove image)
-const removeProductImage = async (req, res, next) => {
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID prodotto non valido", 400));
-        }
+const removeProductImage = asyncHandler(async (req, res, next) => {
 
         const { image } = req.body;
 
@@ -178,21 +135,11 @@ const removeProductImage = async (req, res, next) => {
             message: "Immagine rimossa",
             data: product
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // DELETE
-const deleteProduct = async (req, res, next) => {
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID prodotto non valido", 400));
-        }
-
+const deleteProduct = asyncHandler(async (req, res, next) => {
+    
         const deletedProduct = await Product.findByIdAndDelete(req.params.id);
 
         if (!deletedProduct) {
@@ -203,12 +150,7 @@ const deleteProduct = async (req, res, next) => {
             message: "Prodotto eliminato",
             data: deletedProduct
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 module.exports = {
     getProducts,

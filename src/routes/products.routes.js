@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
+const validateObjectId = require("../middlewares/validateObjectId.middleware");
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -29,12 +30,12 @@ router.route("/")
     .post(upload.array("images", 5), createProduct);
 
 router.route("/:id")
-    .get(getProductById)
-    .put(updateProduct)
-    .delete(deleteProduct);
+    .get(validateObjectId, getProductById)
+    .put(validateObjectId, updateProduct)
+    .delete(validateObjectId, deleteProduct);
 
-router.patch("/:id/add-image", upload.array("images", 5), addProductImage);
-router.patch("/:id/remove-image", removeProductImage);
+router.patch("/:id/add-image", validateObjectId, upload.array("images", 5), addProductImage);
+router.patch("/:id/remove-image", validateObjectId, removeProductImage);
 
 
 module.exports = router;

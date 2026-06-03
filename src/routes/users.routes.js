@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const validateObjectId = require("../middlewares/validateObjectId.middleware");
 
 const { 
     getUsers, 
@@ -16,8 +17,8 @@ router.route("/")
 
 // GET by id
 router.route("/:id")
-    .get(getUserById)
-    .put(updateUser)
-    .delete(deleteUser);
+    .get(validateObjectId, getUserById)
+    .put(validateObjectId, updateUser)
+    .delete(validateObjectId, deleteUser);
 
 module.exports = router;

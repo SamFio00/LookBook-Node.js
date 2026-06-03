@@ -1,30 +1,22 @@
 const mongoose = require("mongoose");
 const User = require("../models/user.model");
+const asyncHandler = require("../utils/asyncHandler"); 
 const AppError = require("../utils/AppError");
 
 // GET all users
-const getUsers = async (req, res, next) => {
+const getUsers = asyncHandler(async (req, res) => {
 
-    try {
+    const users = await User.find();
 
-        const users = await User.find();
-
-        res.status(200).json({
-            message: "Lista utenti",
-            results: users.length,
-            data: users
-        });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+    res.status(200).json({
+        message: "Lista utenti",
+        results: users.length,
+        data: users
+    });
+});
 
 // POST create user
-const createUser = async (req, res, next) => {
-
-    try {
+const createUser = asyncHandler(async (req, res, next) => {
 
         const { name, surname, email } = req.body;
 
@@ -48,20 +40,9 @@ const createUser = async (req, res, next) => {
             message: "Utente creato",
             data: newUser
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 // GET by id
-const getUserById = async (req, res, next) => {
-
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID utente non valido", 400));
-        }
+const getUserById = asyncHandler(async (req, res, next) => {
 
         const user = await User.findById(req.params.id);
 
@@ -73,21 +54,10 @@ const getUserById = async (req, res, next) => {
             message: "Utente trovato",
             data: user
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // PUT
-const updateUser = async (req, res, next) => {
-
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID utente non valido", 400));
-        }
+const updateUser = asyncHandler(async (req, res, next) => {
 
         const { name, surname, email } = req.body;
 
@@ -111,21 +81,10 @@ const updateUser = async (req, res, next) => {
             message: "Utente aggiornato",
             data: updatedUser
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 // DELETE
-const deleteUser = async (req, res, next) => {
-
-    try {
-
-        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-            return next(new AppError("ID utente non valido", 400));
-        }
+const deleteUser = asyncHandler(async (req, res, next) => {
 
         const deletedUser = await User.findByIdAndDelete(req.params.id);
 
@@ -137,12 +96,7 @@ const deleteUser = async (req, res, next) => {
             message: "Utente eliminato",
             data: deletedUser
         });
-
-    } catch (error) {
-        error.statusCode = 500;
-        next(error);
-    }
-};
+});
 
 module.exports = {
   getUsers,
