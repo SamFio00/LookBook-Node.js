@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const User = require("../models/user.model");
 const asyncHandler = require("../utils/asyncHandler"); 
 const AppError = require("../utils/AppError");
@@ -18,90 +17,81 @@ const getUsers = asyncHandler(async (req, res) => {
 // POST create user
 const createUser = asyncHandler(async (req, res, next) => {
 
-        const { name, surname, email } = req.body;
+    const { name, surname, email } = req.body;
 
-        if (!name || !surname || !email) {
-            return next(new AppError("Tutti i campi sono obbligatori", 400));
-        }
+    const existingEmail = await User.findOne({ email });
 
-        const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+        return next(new AppError("Email già in uso", 409));
+    }
 
-        if (existingEmail) {
-            return next(new AppError("Email già in uso", 409));
-        }
+    const newUser = await User.create({
+        name,
+        surname,
+        email
+    });
 
-        const newUser = await User.create({
-            name,
-            surname,
-            email
-        });
-
-        res.status(201).json({
-            message: "Utente creato",
-            data: newUser
-        });
+    res.status(201).json({
+        message: "Utente creato",
+        data: newUser
+    });
 });
+
 // GET by id
 const getUserById = asyncHandler(async (req, res, next) => {
 
-        const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id);
 
-        if (!user) {
-            return next(new AppError("Utente non trovato", 404));
-        }
+    if (!user) {
+        return next(new AppError("Utente non trovato", 404));
+    }
 
-        res.status(200).json({
-            message: "Utente trovato",
-            data: user
-        });
+    res.status(200).json({
+        message: "Utente trovato",
+        data: user
+    });
 });
 
 // PUT
 const updateUser = asyncHandler(async (req, res, next) => {
 
-        const { name, surname, email } = req.body;
+    const updateData = req.body;
 
-        const updateData = {};
+    const updatedUser = await User.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true, runValidators: true }
+    );
 
-        if (name) updateData.name = name;
-        if (surname) updateData.surname = surname;
-        if (email) updateData.email = email;
+    if (!updatedUser) {
+        return next(new AppError("Utente non trovato", 404));
+    }
 
-        const updatedUser = await User.findByIdAndUpdate(
-            req.params.id,
-            updateData,
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedUser) {
-            return next(new AppError("Utente non trovato", 404));
-        }
-
-        res.status(200).json({
-            message: "Utente aggiornato",
-            data: updatedUser
-        });
+    res.status(200).json({
+        message: "Utente aggiornato",
+        data: updatedUser
+    });
 });
 
 // DELETE
 const deleteUser = asyncHandler(async (req, res, next) => {
 
-        const deletedUser = await User.findByIdAndDelete(req.params.id);
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
 
-        if (!deletedUser) {
-            return next(new AppError("Utente non trovato", 404));
-        }
+    if (!deletedUser) {
+        return next(new AppError("Utente non trovato", 404));
+    }
 
-        res.status(200).json({
-            message: "Utente eliminato",
-            data: deletedUser
-        });
+    res.status(200).json({
+        message: "Utente eliminato",
+        data: deletedUser
+    });
 });
 
 module.exports = {
-  getUsers,
-  createUser,
-  getUserById,
-  updateUser,
-  deleteUser
+    getUsers,
+    createUser,
+    getUserById,
+    updateUser,
+    deleteUser
 };

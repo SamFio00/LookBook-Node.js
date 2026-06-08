@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 const Product = require("../models/product.model");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
@@ -19,10 +18,6 @@ const getProducts = asyncHandler(async (req, res) => {
 const createProduct = asyncHandler(async (req, res, next) => {
 
         const { name } = req.body;
-
-        if (!name) {
-            return next(new AppError("Nome obbligatorio", 400));
-        }
 
         if (!req.files || req.files.length === 0) {
             return next(new AppError("Devi caricare almeno un'immagine", 400));
@@ -57,17 +52,14 @@ const getProductById = asyncHandler(async (req, res, next) => {
         });
 });
 
-// PUT (update only text fields)
+// PUT (update solo del nome)
 const updateProduct = asyncHandler(async (req, res, next) => {
 
         const { name } = req.body;
 
-        const updateData = {};
-        if (name) updateData.name = name;
-
         const updatedProduct = await Product.findByIdAndUpdate(
             req.params.id,
-            updateData,
+            { name },
             { new: true, runValidators: true }
         );
 

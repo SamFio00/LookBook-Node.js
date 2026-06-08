@@ -18,170 +18,156 @@ const populateSwap = (query) => {
 // GET ALL SWAPS
 const getSwaps = asyncHandler(async (req, res, next) => {
 
-        const { status, productId, date } = req.query;
+    const { status, productId, date } = req.query;
 
-        const filters = {};
+    const filters = {};
 
-        if (status) {
+    if (status) {
 
-            const allowedStatus = [
-                "pending",
-                "accepted",
-                "rejected"
-            ];
+        const allowedStatus = [
+            "pending",
+            "accepted",
+            "rejected"
+        ];
 
-            if (!allowedStatus.includes(status)) {
-                return next(new AppError("Stato non valido", 400));
-            }
-
-            filters.status = status;
+        if (!allowedStatus.includes(status)) {
+            return next(new AppError("Stato non valido", 400));
         }
 
-        if (date) {
+        filters.status = status;
+    }
 
-            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (date) {
 
-            if (!dateRegex.test(date)) {
-                return next(new AppError("Data non valida, formato: YYYY-MM-DD", 400));
-            }
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
-            const startDate = new Date(date);
-            const endDate = new Date(date);
-
-            endDate.setHours(23, 59, 59, 999);
-
-            filters.createdAt = {
-                $gte: startDate,
-                $lte: endDate
-            };
+        if (!dateRegex.test(date)) {
+            return next(new AppError("Data non valida, formato: YYYY-MM-DD", 400));
         }
 
-        if (productId) {
+        const startDate = new Date(date);
+        const endDate = new Date(date);
 
-            if (!mongoose.Types.ObjectId.isValid(productId)) {
-                return next(new AppError("ID prodotto non valido", 400));
-            }
+        endDate.setHours(23, 59, 59, 999);
 
-            const productExists = await Product.findById(productId);
+        filters.createdAt = {
+            $gte: startDate,
+            $lte: endDate
+        };
+    }
 
-            if (!productExists) {
-                return next(new AppError("Prodotto non trovato", 404));
-            }
+    if (productId) {
 
-            filters.$or = [
-                { requesterProduct: productId },
-                { receiverProduct: productId }
-            ];
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return next(new AppError("ID prodotto non valido", 400));
         }
 
-        const swaps = await populateSwap(
-            Swap.find(filters)
-        );
+        const productExists = await Product.findById(productId);
 
-        res.status(200).json({
-            message: "Lista swaps",
-            results: swaps.length,
-            data: swaps
-        });
+        if (!productExists) {
+            return next(new AppError("Prodotto non trovato", 404));
+        }
+
+        filters.$or = [
+            { requesterProduct: productId },
+            { receiverProduct: productId }
+        ];
+    }
+
+    const swaps = await populateSwap(
+        Swap.find(filters)
+    );
+
+    res.status(200).json({
+        message: "Lista swaps",
+        results: swaps.length,
+        data: swaps
+    });
 });
 
 // CREATE SWAP
 const createSwap = asyncHandler(async (req, res, next) => {
 
-        const {
-            requesterUser,
-            receiverUser,
-            requesterProduct,
-            receiverProduct
-        } = req.body;
+    const {
+        requesterUser,
+        receiverUser,
+        requesterProduct,
+        receiverProduct
+    } = req.body;
 
-        if (
-            !requesterUser ||
-            !receiverUser ||
-            !requesterProduct ||
-            !receiverProduct
-        ) {
-            return next(new AppError("Tutti i campi sono obbligatori", 400));
-        }
+    if (!requesterUser || !receiverUser || !requesterProduct || !receiverProduct) {
+        return next(new AppError("Dati mancanti", 400));
+    }
 
-        if (
-            !mongoose.Types.ObjectId.isValid(requesterUser) ||
-            !mongoose.Types.ObjectId.isValid(receiverUser) ||
-            !mongoose.Types.ObjectId.isValid(requesterProduct) ||
-            !mongoose.Types.ObjectId.isValid(receiverProduct)
-        ) {
-            return next(new AppError("Uno o più ID non sono validi", 400));
-        }
+    if (requesterUser === receiverUser) {
+        return next(new AppError("Utenti uguali non permessi", 400));
+    }
 
-        if (requesterUser === receiverUser) {
-            return next(new AppError("Utenti devono essere diversi", 400));
-        }
+    if (requesterProduct === receiverProduct) {
+        return next(new AppError("Prodotti uguali non permessi", 400));
+    }
 
-        if (requesterProduct === receiverProduct) {
-            return next(new AppError("Prodotti devono essere diversi", 400));
-        }
+    const requesterUserExists = await User.findById(requesterUser);
+    const receiverUserExists = await User.findById(receiverUser);
 
-        const requesterUserExists = await User.findById(requesterUser);
-        const receiverUserExists = await User.findById(receiverUser);
+    if (!requesterUserExists || !receiverUserExists) {
+        return next(new AppError("Uno o più utenti non trovati", 404));
+    }
 
-        if (!requesterUserExists || !receiverUserExists) {
-            return next(new AppError("Uno o più utenti non trovati", 404));
-        }
+    const requesterProductExists = await Product.findById(requesterProduct);
+    const receiverProductExists = await Product.findById(receiverProduct);
 
-        const requesterProductExists = await Product.findById(requesterProduct);
-        const receiverProductExists = await Product.findById(receiverProduct);
+    if (!requesterProductExists || !receiverProductExists) {
+        return next(new AppError("Uno o più prodotti non trovati", 404));
+    }
 
-        if (!requesterProductExists || !receiverProductExists) {
-            return next(new AppError("Uno o più prodotti non trovati", 404));
-        }
+    const newSwap = await Swap.create({
+        requesterUser,
+        receiverUser,
+        requesterProduct,
+        receiverProduct
+    });
 
-        const newSwap = await Swap.create({
-            requesterUser,
-            receiverUser,
-            requesterProduct,
-            receiverProduct
-        });
+    const populatedSwap = await populateSwap(
+        Swap.findById(newSwap._id)
+    );
 
-        const populatedSwap = await populateSwap(
-            Swap.findById(newSwap._id)
-        );
-
-        res.status(201).json({
-            message: "Swap creato",
-            data: populatedSwap
-        });
+    res.status(201).json({
+        message: "Swap creato",
+        data: populatedSwap
+    });
 });
 
 // GET SWAP BY ID
 const getSwapById = asyncHandler(async (req, res, next) => {
 
-        const swap = await populateSwap(
-            Swap.findById(req.params.id)
-        );
+    const swap = await populateSwap(
+        Swap.findById(req.params.id)
+    );
 
-        if (!swap) {
-            return next(new AppError("Swap non trovato", 404));
-        }
+    if (!swap) {
+        return next(new AppError("Swap non trovato", 404));
+    }
 
-        res.status(200).json({
-            message: "Swap trovato",
-            data: swap
-        });
+    res.status(200).json({
+        message: "Swap trovato",
+        data: swap
+    });
 });
 
 // DELETE SWAP
 const deleteSwap = asyncHandler(async (req, res, next) => {
 
-        const deletedSwap = await Swap.findByIdAndDelete(req.params.id);
+    const deletedSwap = await Swap.findByIdAndDelete(req.params.id);
 
-        if (!deletedSwap) {
-            return next(new AppError("Swap non trovato", 404));
-        }
+    if (!deletedSwap) {
+        return next(new AppError("Swap non trovato", 404));
+    }
 
-        res.status(200).json({
-            message: "Swap eliminato",
-            data: deletedSwap
-        });
+    res.status(200).json({
+        message: "Swap eliminato",
+        data: deletedSwap
+    });
 });
 
 // UPDATE SWAP STATUS

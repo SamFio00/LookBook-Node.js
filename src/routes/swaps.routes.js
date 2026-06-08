@@ -2,18 +2,30 @@ const express = require("express");
 const router = express.Router();
 const validateObjectId = require("../middlewares/validateObjectId.middleware");
 
-const { 
-    getSwaps, 
-    createSwap, 
+const {
+    createSwapValidator,
+    createSwapBusinessValidator
+} = require("../middlewares/validators/swap.validator");
+
+const validateRequest = require("../middlewares/validateRequest.middleware");
+
+const {
+    getSwaps,
+    createSwap,
     getSwapById,
     deleteSwap,
-    acceptSwap, 
-    rejectSwap 
+    acceptSwap,
+    rejectSwap
 } = require("../controllers/swaps.controller");
 
 router.route("/")
     .get(getSwaps)
-    .post(createSwap);
+    .post(
+        createSwapValidator,
+        createSwapBusinessValidator,
+        validateRequest,
+        createSwap
+    );
 
 router.route("/:id")
     .get(validateObjectId, getSwapById)

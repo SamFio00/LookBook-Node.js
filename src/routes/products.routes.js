@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const { createProductValidator, updateProductValidator } = require("../middlewares/validators/product.validator");
+const validateRequest = require("../middlewares/validateRequest.middleware");
 const multer = require("multer");
 const validateObjectId = require("../middlewares/validateObjectId.middleware");
 
@@ -27,14 +29,19 @@ const {
 
 router.route("/")
     .get(getProducts)
-    .post(upload.array("images", 5), createProduct);
+    .post(
+        upload.array("images", 5),
+        createProductValidator,
+        validateRequest,
+        createProduct
+    );
 
 router.route("/:id")
     .get(validateObjectId, getProductById)
-    .put(validateObjectId, updateProduct)
-    .delete(validateObjectId, deleteProduct);
+    .put(validateObjectId, updateProductValidator, validateRequest, updateProduct) 
+    .delete(validateObjectId, deleteProduct); 
 
-router.patch("/:id/add-image", validateObjectId, upload.array("images", 5), addProductImage);
+router.patch("/:id/add-image", upload.array("images", 5), validateObjectId, addProductImage);
 router.patch("/:id/remove-image", validateObjectId, removeProductImage);
 
 
