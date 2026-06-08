@@ -1,6 +1,7 @@
 const Product = require("../models/product.model");
 const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
+const fs = require("fs");
 
 // GET
 const getProducts = asyncHandler(async (req, res) => {
@@ -113,11 +114,17 @@ const removeProductImage = asyncHandler(async (req, res, next) => {
             return next(new AppError("Prodotto non trovato", 404));
         }
 
-        const filteredImages = product.images.filter(img => img !== image);
-
-        if (filteredImages.length === product.images.length) {
+        if (!product.images.includes(image)) {
             return next(new AppError("Immagine non trovata", 404));
         }
+
+        fs.unlink(image, (err) => {
+            if (err) {
+                console.error(err.message);
+            }
+        });
+
+        const filteredImages = product.images.filter(img => img !== image);
 
         product.images = filteredImages;
 
@@ -131,16 +138,26 @@ const removeProductImage = asyncHandler(async (req, res, next) => {
 
 // DELETE
 const deleteProduct = asyncHandler(async (req, res, next) => {
-    
-        const deletedProduct = await Product.findByIdAndDelete(req.params.id);
 
-        if (!deletedProduct) {
+        const product = await Product.findById(req.params.id);
+
+        if (!product) {
             return next(new AppError("Prodotto non trovato", 404));
         }
 
+        product.images.forEach((imagePath) => {
+            fs.unlink(imagePath, (err) => {
+                if (err) {
+                    console.error(err.message);
+                }
+            });
+        });
+
+        await Product.findByIdAndDelete(req.params.id);
+
         res.status(200).json({
             message: "Prodotto eliminato",
-            data: deletedProduct
+            data: product
         });
 });
 
