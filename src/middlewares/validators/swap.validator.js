@@ -41,7 +41,30 @@ const createSwapBusinessValidator = [
     })
 ];
 
+const updateSwapValidator = [
+    body("requesterUser")
+        .not()
+        .exists()
+        .withMessage("Requester user non modificabile"),
+
+    body("receiverUser")
+        .optional()
+        .isMongoId()
+        .withMessage("Receiver user non valido"),
+
+    body("requesterProduct")
+        .optional()
+        .isMongoId()
+        .withMessage("Requester product non valido"),
+
+    body("receiverProduct")
+        .optional()
+        .isMongoId()
+        .withMessage("Receiver product non valido")
+];
+
 module.exports = {
     createSwapValidator,
-    createSwapBusinessValidator
+    createSwapBusinessValidator,
+    updateSwapValidator
 };
