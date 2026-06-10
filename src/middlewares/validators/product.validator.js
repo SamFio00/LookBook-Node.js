@@ -4,9 +4,13 @@ const createProductValidator = [
     body("name")
         .notEmpty()
         .withMessage("Nome obbligatorio")
+        .bail()
         .isString()
         .withMessage("Nome deve essere una stringa")
+        .bail()
         .trim()
+        .isLength({ min: 2 })
+        .withMessage("Nome troppo corto")
 ];
 
 const updateProductValidator = [
@@ -14,7 +18,10 @@ const updateProductValidator = [
         .optional()
         .isString()
         .withMessage("Nome deve essere una stringa")
+        .bail()
         .trim()
+        .isLength({ min: 2 })
+        .withMessage("Nome troppo corto")
 ];
 
 module.exports = {

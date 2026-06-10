@@ -9,6 +9,7 @@ const Product = require("../../src/models/product.model");
 const {
     getSwaps,
     createSwap,
+    updateSwap,
     deleteSwap,
     acceptSwap,
     rejectSwap
@@ -390,6 +391,341 @@ test("createSwap crea uno swap e risponde con status 201", async () => {
     });
 
     assert.strictEqual(next.notCalled, true);
+});
+
+test("updateSwap aggiorna uno swap e risponde con status 200", async () => {
+    const swap = {
+        _id: "swap-id",
+        status: "pending",
+        requesterUser: { toString: () => "user-1" },
+        requesterProduct: { toString: () => "product-1" },
+        receiverProduct: { toString: () => "product-2" },
+        save: sinon.stub().resolves()
+    };
+
+    const populatedSwap = {
+        _id: "swap-id",
+        receiverUser: { _id: "user-3", name: "Peach" },
+        status: "pending"
+    };
+
+    const req = {
+        params: { id: "swap-id" },
+        body: { receiverUser: "user-3" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    const query = createPopulateQuery(populatedSwap);
+
+    sinon.stub(Swap, "findById");
+    Swap.findById.onCall(0).resolves(swap);
+    Swap.findById.onCall(1).returns(query);
+
+    sinon.stub(User, "findById").resolves({ _id: "user-3" });
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(Swap.findById.callCount, 2);
+    assert.strictEqual(Swap.findById.firstCall.args[0], "swap-id");
+    assert.strictEqual(Swap.findById.secondCall.args[0], "swap-id");
+
+    assert.strictEqual(User.findById.calledOnce, true);
+    assert.strictEqual(User.findById.firstCall.args[0], "user-3");
+
+    assert.strictEqual(swap.save.calledOnce, true);
+    assert.strictEqual(query.populate.callCount, 4);
+
+    assert.strictEqual(res.status.calledOnce, true);
+    assert.strictEqual(res.status.firstCall.args[0], 200);
+
+    assert.strictEqual(res.json.calledOnce, true);
+    assert.deepStrictEqual(res.json.firstCall.args[0], {
+        message: "Swap aggiornato",
+        data: populatedSwap
+    });
+
+    assert.strictEqual(next.notCalled, true);
+});
+
+test("updateSwap restituisce errore 400 se il body è vuoto", async () => {
+    const req = {
+        params: { id: "swap-id" },
+        body: {}
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Nessun dato da aggiornare");
+    assert.strictEqual(error.statusCode, 400);
+
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 400 se il campo non è aggiornabile", async () => {
+    const req = {
+        params: { id: "swap-id" },
+        body: { requesterUser: "user-1" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Campo non aggiornabile");
+    assert.strictEqual(error.statusCode, 400);
+
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 404 se lo swap non esiste", async () => {
+    const req = {
+        params: { id: "swap-id" },
+        body: { receiverUser: "user-3" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    sinon.stub(Swap, "findById").resolves(null);
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(Swap.findById.calledOnce, true);
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Swap non trovato");
+    assert.strictEqual(error.statusCode, 404);
+
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 400 se lo swap non è pending", async () => {
+    const swap = {
+        _id: "swap-id",
+        status: "accepted",
+        save: sinon.stub().resolves()
+    };
+
+    const req = {
+        params: { id: "swap-id" },
+        body: { receiverUser: "user-3" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    sinon.stub(Swap, "findById").resolves(swap);
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(Swap.findById.calledOnce, true);
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Non puoi modificare uno swap già accettato o rifiutato");
+    assert.strictEqual(error.statusCode, 400);
+
+    assert.strictEqual(swap.save.notCalled, true);
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 404 se il nuovo receiverUser non esiste", async () => {
+    const swap = {
+        _id: "swap-id",
+        status: "pending",
+        requesterUser: { toString: () => "user-1" },
+        save: sinon.stub().resolves()
+    };
+
+    const req = {
+        params: { id: "swap-id" },
+        body: { receiverUser: "user-99" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    sinon.stub(Swap, "findById").resolves(swap);
+    sinon.stub(User, "findById").resolves(null);
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(User.findById.calledOnce, true);
+    assert.strictEqual(User.findById.firstCall.args[0], "user-99");
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Utente non trovato");
+    assert.strictEqual(error.statusCode, 404);
+
+    assert.strictEqual(swap.save.notCalled, true);
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 400 se il nuovo receiverUser coincide con requesterUser", async () => {
+    const swap = {
+        _id: "swap-id",
+        status: "pending",
+        requesterUser: { toString: () => "user-1" },
+        save: sinon.stub().resolves()
+    };
+
+    const req = {
+        params: { id: "swap-id" },
+        body: { receiverUser: "user-1" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    sinon.stub(Swap, "findById").resolves(swap);
+    sinon.stub(User, "findById").resolves({ _id: "user-1" });
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Utenti uguali non permessi");
+    assert.strictEqual(error.statusCode, 400);
+
+    assert.strictEqual(swap.save.notCalled, true);
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 404 se il nuovo requesterProduct non esiste", async () => {
+    const swap = {
+        _id: "swap-id",
+        status: "pending",
+        requesterProduct: { toString: () => "product-1" },
+        receiverProduct: { toString: () => "product-2" },
+        save: sinon.stub().resolves()
+    };
+
+    const req = {
+        params: { id: "swap-id" },
+        body: { requesterProduct: "product-99" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    sinon.stub(Swap, "findById").resolves(swap);
+    sinon.stub(Product, "findById").resolves(null);
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(Product.findById.calledOnce, true);
+    assert.strictEqual(Product.findById.firstCall.args[0], "product-99");
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Prodotto non trovato");
+    assert.strictEqual(error.statusCode, 404);
+
+    assert.strictEqual(swap.save.notCalled, true);
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
+});
+
+test("updateSwap restituisce errore 400 se requesterProduct e receiverProduct diventano uguali", async () => {
+    const swap = {
+        _id: "swap-id",
+        status: "pending",
+        requesterProduct: { toString: () => "product-1" },
+        receiverProduct: { toString: () => "product-1" },
+        save: sinon.stub().resolves()
+    };
+
+    const req = {
+        params: { id: "swap-id" },
+        body: { requesterProduct: "product-1" }
+    };
+
+    const res = {
+        status: sinon.stub().returnsThis(),
+        json: sinon.spy()
+    };
+
+    const next = sinon.spy();
+
+    sinon.stub(Swap, "findById").resolves(swap);
+    sinon.stub(Product, "findById").resolves({ _id: "product-1" });
+
+    await updateSwap(req, res, next);
+
+    assert.strictEqual(next.calledOnce, true);
+
+    const error = next.firstCall.args[0];
+
+    assert.strictEqual(error.message, "Prodotti uguali non permessi");
+    assert.strictEqual(error.statusCode, 400);
+
+    assert.strictEqual(swap.save.notCalled, true);
+    assert.strictEqual(res.status.notCalled, true);
+    assert.strictEqual(res.json.notCalled, true);
 });
 
 test("deleteSwap elimina uno swap e risponde con status 200", async () => {

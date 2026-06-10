@@ -1,31 +1,29 @@
 const { body } = require("express-validator");
 
+// CREATE
 const createSwapValidator = [
     body("requesterUser")
-        .notEmpty()
-        .withMessage("Requester user obbligatorio")
-        .isMongoId()
-        .withMessage("Requester user non valido"),
+        .notEmpty().withMessage("Requester user obbligatorio")
+        .bail()
+        .isMongoId().withMessage("Requester user non valido"),
 
     body("receiverUser")
-        .notEmpty()
-        .withMessage("Receiver user obbligatorio")
-        .isMongoId()
-        .withMessage("Receiver user non valido"),
+        .notEmpty().withMessage("Receiver user obbligatorio")
+        .bail()
+        .isMongoId().withMessage("Receiver user non valido"),
 
     body("requesterProduct")
-        .notEmpty()
-        .withMessage("Requester product obbligatorio")
-        .isMongoId()
-        .withMessage("Requester product non valido"),
+        .notEmpty().withMessage("Requester product obbligatorio")
+        .bail()
+        .isMongoId().withMessage("Requester product non valido"),
 
     body("receiverProduct")
-        .notEmpty()
-        .withMessage("Receiver product obbligatorio")
-        .isMongoId()
-        .withMessage("Receiver product non valido")
+        .notEmpty().withMessage("Receiver product obbligatorio")
+        .bail()
+        .isMongoId().withMessage("Receiver product non valido"),
 ];
 
+// BUSINESS RULES CREATE
 const createSwapBusinessValidator = [
     body().custom((value) => {
 
@@ -41,11 +39,30 @@ const createSwapBusinessValidator = [
     })
 ];
 
+// UPDATE
 const updateSwapValidator = [
-    body("requesterUser")
-        .not()
-        .exists()
-        .withMessage("Requester user non modificabile"),
+    body().custom((value) => {
+
+        if (!value || Object.keys(value).length === 0) {
+            throw new Error("Nessun dato da aggiornare");
+        }
+
+        const allowedFields = [
+            "receiverUser",
+            "requesterProduct",
+            "receiverProduct"
+        ];
+
+        const keys = Object.keys(value);
+
+        const isValid = keys.every(k => allowedFields.includes(k));
+
+        if (!isValid) {
+            throw new Error("Campo non modificabile");
+        }
+
+        return true;
+    }),
 
     body("receiverUser")
         .optional()

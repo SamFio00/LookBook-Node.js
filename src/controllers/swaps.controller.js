@@ -155,6 +155,114 @@ const getSwapById = asyncHandler(async (req, res, next) => {
     });
 });
 
+// UPDATE SWAP
+const updateSwap = asyncHandler(async (req, res, next) => {
+
+    const allowedFields = [
+        "receiverUser",
+        "requesterProduct",
+        "receiverProduct"
+    ];
+
+    const updates = Object.keys(req.body);
+
+    if (updates.length === 0) {
+        return next(new AppError("Nessun dato da aggiornare", 400));
+    }
+
+    const isValidUpdate = updates.every(field =>
+        allowedFields.includes(field)
+    );
+
+    if (!isValidUpdate) {
+        return next(new AppError("Campo non aggiornabile", 400));
+    }
+
+    const swap = await Swap.findById(req.params.id);
+
+    if (!swap) {
+        return next(new AppError("Swap non trovato", 404));
+    }
+
+    if (swap.status !== "pending") {
+        return next(
+            new AppError(
+                "Non puoi modificare uno swap già accettato o rifiutato",
+                400
+            )
+        );
+    }
+
+    if (req.body.receiverUser) {
+
+        const receiverUserExists = await User.findById(
+            req.body.receiverUser
+        );
+
+        if (!receiverUserExists) {
+            return next(new AppError("Utente non trovato", 404));
+        }
+
+        if (
+            req.body.receiverUser ===
+            swap.requesterUser.toString()
+        ) {
+            return next(
+                new AppError("Utenti uguali non permessi", 400)
+            );
+        }
+
+        swap.receiverUser = req.body.receiverUser;
+    }
+
+    if (req.body.requesterProduct) {
+
+        const requesterProductExists = await Product.findById(
+            req.body.requesterProduct
+        );
+
+        if (!requesterProductExists) {
+            return next(new AppError("Prodotto non trovato", 404));
+        }
+
+        swap.requesterProduct = req.body.requesterProduct;
+    }
+
+    if (req.body.receiverProduct) {
+
+        const receiverProductExists = await Product.findById(
+            req.body.receiverProduct
+        );
+
+        if (!receiverProductExists) {
+            return next(new AppError("Prodotto non trovato", 404));
+        }
+
+        swap.receiverProduct = req.body.receiverProduct;
+    }
+
+    if (
+        swap.requesterProduct.toString() ===
+        swap.receiverProduct.toString()
+    ) {
+        return next(
+            new AppError("Prodotti uguali non permessi", 400)
+        );
+    }
+
+    await swap.save();
+
+    const populatedSwap = await populateSwap(
+        Swap.findById(swap._id)
+    );
+
+    res.status(200).json({
+        message: "Swap aggiornato",
+        data: populatedSwap
+    });
+
+});
+
 // DELETE SWAP
 const deleteSwap = asyncHandler(async (req, res, next) => {
 
@@ -206,6 +314,7 @@ module.exports = {
     getSwaps,
     createSwap,
     getSwapById,
+    updateSwap,
     deleteSwap,
     updateSwapStatus,
     acceptSwap,
