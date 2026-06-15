@@ -204,4 +204,8 @@ npm test
 
 ## Autore
 
-Progetto sviluppato come esercitazione backend con Node.js, Express e MongoDB seguendo i principi REST e le buone pratiche di validazione, gestione degli errori e sicurezza delle API.
+Samuele Fiorini  
+- GitHub: https://github.com/SamFio00  
+- LinkedIn: https://www.linkedin.com/in/samuele-fiorini-38bba9325  
+- Instagram: https://www.instagram.com/fiorini_sam_00
+
