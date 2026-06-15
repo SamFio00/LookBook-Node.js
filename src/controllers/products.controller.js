@@ -147,7 +147,6 @@ const deleteProduct = asyncHandler(async (req, res, next) => {
         return next(new AppError("Prodotto non trovato", 404));
     }
 
-    // elimina immagini dal filesystem
     product.images.forEach((imagePath) => {
         fs.unlink(imagePath, (err) => {
             if (err) {
