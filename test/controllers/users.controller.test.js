@@ -3,7 +3,15 @@ const assert = require("node:assert");
 const sinon = require("sinon");
 
 const User = require("../../src/models/user.model");
-const { getUsers, createUser, getUserById, updateUser, deleteUser } = require("../../src/controllers/users.controller");
+const { 
+    getUsers, 
+    createUser, 
+    getUserById, 
+    updateUser, 
+    deleteUser 
+} = require("../../src/controllers/users.controller");
+
+const Swap = require("../../src/models/swap.model");
 
 test.afterEach(() => {
     sinon.restore();
@@ -289,7 +297,7 @@ test("updateUser restituisce errore 404 se l'utente non esiste", async () => {
 });
 
 test("deleteUser elimina un utente e risponde con status 200", async () => {
-    const deletedUser = {
+    const user = {
         _id: "user-id",
         name: "Mario",
         surname: "Rossi",
@@ -309,9 +317,16 @@ test("deleteUser elimina un utente e risponde con status 200", async () => {
 
     const next = sinon.spy();
 
-    sinon.stub(User, "findByIdAndDelete").resolves(deletedUser);
+    sinon.stub(User, "findById").resolves(user);
+    sinon.stub(Swap, "deleteMany").resolves({ deletedCount: 2 });
+    sinon.stub(User, "findByIdAndDelete").resolves(user);
 
     await deleteUser(req, res, next);
+
+    assert.strictEqual(User.findById.calledOnce, true);
+    assert.strictEqual(User.findById.firstCall.args[0], "user-id");
+
+    assert.strictEqual(Swap.deleteMany.calledOnce, true);
 
     assert.strictEqual(User.findByIdAndDelete.calledOnce, true);
     assert.strictEqual(User.findByIdAndDelete.firstCall.args[0], "user-id");
@@ -322,7 +337,7 @@ test("deleteUser elimina un utente e risponde con status 200", async () => {
     assert.strictEqual(res.json.calledOnce, true);
     assert.deepStrictEqual(res.json.firstCall.args[0], {
         message: "Utente eliminato",
-        data: deletedUser
+        data: user
     });
 
     assert.strictEqual(next.notCalled, true);
@@ -342,12 +357,12 @@ test("deleteUser restituisce errore 404 se l'utente non esiste", async () => {
 
     const next = sinon.spy();
 
-    sinon.stub(User, "findByIdAndDelete").resolves(null);
+    sinon.stub(User, "findById").resolves(null);
 
     await deleteUser(req, res, next);
 
-    assert.strictEqual(User.findByIdAndDelete.calledOnce, true);
-    assert.strictEqual(User.findByIdAndDelete.firstCall.args[0], "user-id");
+    assert.strictEqual(User.findById.calledOnce, true);
+    assert.strictEqual(User.findById.firstCall.args[0], "user-id");
 
     assert.strictEqual(next.calledOnce, true);
 

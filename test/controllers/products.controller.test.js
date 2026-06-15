@@ -3,6 +3,8 @@ const assert = require("node:assert");
 const sinon = require("sinon");
 const fs = require("fs");
 
+const Swap = require("../../src/models/swap.model");
+
 const Product = require("../../src/models/product.model");
 const {
     getProducts,
@@ -605,8 +607,9 @@ test("deleteProduct elimina un prodotto, rimuove le immagini e risponde con stat
     const next = sinon.spy();
 
     sinon.stub(Product, "findById").resolves(product);
+    sinon.stub(Swap, "deleteMany").resolves({ deletedCount: 1 }); 
     sinon.stub(Product, "findByIdAndDelete").resolves(product);
-    sinon.stub(fs, "unlink").callsFake((path, callback) => callback(null));
+    sinon.stub(fs, "unlink").callsFake(() => {});
 
     await deleteProduct(req, res, next);
 
@@ -616,6 +619,14 @@ test("deleteProduct elimina un prodotto, rimuove le immagini e risponde con stat
     assert.strictEqual(fs.unlink.callCount, 2);
     assert.strictEqual(fs.unlink.firstCall.args[0], "uploads/giacca-1.jpg");
     assert.strictEqual(fs.unlink.secondCall.args[0], "uploads/giacca-2.jpg");
+
+    assert.strictEqual(Swap.deleteMany.calledOnce, true); 
+    assert.deepStrictEqual(Swap.deleteMany.firstCall.args[0], {
+        $or: [
+            { requesterProduct: "product-id" },
+            { receiverProduct: "product-id" }
+        ]
+    });
 
     assert.strictEqual(Product.findByIdAndDelete.calledOnce, true);
     assert.strictEqual(Product.findByIdAndDelete.firstCall.args[0], "product-id");
