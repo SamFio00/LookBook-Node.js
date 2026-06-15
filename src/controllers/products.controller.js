@@ -3,6 +3,8 @@ const asyncHandler = require("../utils/asyncHandler");
 const AppError = require("../utils/AppError");
 const fs = require("fs");
 
+const Swap = require("../models/swap.model");
+
 // GET
 const getProducts = asyncHandler(async (req, res) => {
 
@@ -139,26 +141,34 @@ const removeProductImage = asyncHandler(async (req, res, next) => {
 // DELETE
 const deleteProduct = asyncHandler(async (req, res, next) => {
 
-        const product = await Product.findById(req.params.id);
+    const product = await Product.findById(req.params.id);
 
-        if (!product) {
-            return next(new AppError("Prodotto non trovato", 404));
-        }
+    if (!product) {
+        return next(new AppError("Prodotto non trovato", 404));
+    }
 
-        product.images.forEach((imagePath) => {
-            fs.unlink(imagePath, (err) => {
-                if (err) {
-                    console.error(err.message);
-                }
-            });
+    // elimina immagini dal filesystem
+    product.images.forEach((imagePath) => {
+        fs.unlink(imagePath, (err) => {
+            if (err) {
+                console.error(err.message);
+            }
         });
+    });
 
-        await Product.findByIdAndDelete(req.params.id);
+    await Swap.deleteMany({
+        $or: [
+            { requesterProduct: product._id },
+            { receiverProduct: product._id }
+        ]
+    });
 
-        res.status(200).json({
-            message: "Prodotto eliminato",
-            data: product
-        });
+    await Product.findByIdAndDelete(product._id);
+
+    res.status(200).json({
+        message: "Prodotto eliminato",
+        data: product
+    });
 });
 
 module.exports = {

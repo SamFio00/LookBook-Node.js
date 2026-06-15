@@ -2,6 +2,8 @@ const User = require("../models/user.model");
 const asyncHandler = require("../utils/asyncHandler"); 
 const AppError = require("../utils/AppError");
 
+const Swap = require("../models/swap.model");
+
 // GET all users
 const getUsers = asyncHandler(async (req, res) => {
 
@@ -76,15 +78,24 @@ const updateUser = asyncHandler(async (req, res, next) => {
 // DELETE
 const deleteUser = asyncHandler(async (req, res, next) => {
 
-    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findById(req.params.id);
 
-    if (!deletedUser) {
+    if (!user) {
         return next(new AppError("Utente non trovato", 404));
     }
 
+    await Swap.deleteMany({
+        $or: [
+            { requesterUser: user._id },
+            { receiverUser: user._id }
+        ]
+    });
+
+    await User.findByIdAndDelete(user._id);
+
     res.status(200).json({
         message: "Utente eliminato",
-        data: deletedUser
+        data: user
     });
 });
 
