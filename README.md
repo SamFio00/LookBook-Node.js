@@ -103,6 +103,8 @@ npm start
 | GET | /api/products/:id | Prodotto singolo |
 | POST | /api/products | Creazione prodotto |
 | PUT | /api/products/:id | Modifica prodotto |
+| PATCH | /api/products/:id/add-image | Aggiungere immagine |
+| PATCH | /api/products/:id/remove-image | Rimuovere immagine |
 | DELETE | /api/products/:id | Eliminazione prodotto |
 
 ### Swaps
